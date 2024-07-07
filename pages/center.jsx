@@ -18,11 +18,15 @@ export default function Center() {
         setResult((prevResult) => prevResult.slice(0, -1));
       } else if (value === '=') {
         // Perform calculation
-        try {
-          const evalResult = eval(result);
-          setSolved(evalResult.toString());
-        } catch (error) {
-          console.error(error);
+        if (result === '') {
+          alert('Enter a value before calculating');
+        } else {
+          try {
+            const evalResult = eval(result.replace(/X/g, '*'));
+            setSolved(evalResult.toString());
+          } catch (error) {
+            console.error(error);
+          }
         }
       } else if (value === '+/-') {
         // Toggle positive/negative sign if result is not empty
@@ -40,6 +44,10 @@ export default function Center() {
       } else if (value === '%') {
         // Calculate percentage
         setResult((prevResult) => {
+          if (prevResult === '' || isNaN(parseFloat(prevResult))) {
+            alert('Enter a number before using percentage');
+            return prevResult;
+          }
           try {
             const numbers = prevResult.split(/([-+*/])/);
             let num1 = parseFloat(numbers[numbers.length - 3]);
@@ -47,13 +55,13 @@ export default function Center() {
             const num2 = parseFloat(numbers[numbers.length - 1]);
     
             if (operator === '-') {
-              num1 -= (num1 * (num2 / 100));
+              num1 -= num1 * (num2 / 100);
             } else if (operator === '+') {
-              num1 += (num1 * (num2 / 100));
+              num1 += num1 * (num2 / 100);
             } else if (operator === '/') {
-              num1 /= (1 - (num2 / 100));
+              num1 /= 1 - num2 / 100;
             } else if (operator === '*') {
-              num1 *= (1 - (num2 / 100));
+              num1 *= 1 - num2 / 100;
             }
     
             return num1.toString();
@@ -64,27 +72,26 @@ export default function Center() {
         });
         setSolved('');
       } else if (value === 'CE' || value === 'Clear') {
-        // Clear both result and solved
+        // Clear the entered number without printing "Clear"
         setResult('');
         setSolved('');
-      } else if (value === 'X') {
-        // Perform multiplication
-        setResult((prevResult) => {
-          // Ensure there is a non-empty string before 'X'
-          if (prevResult !== '' && prevResult.charAt(prevResult.length - 1) !== 'X') {
-            return prevResult + '*';
-          }
-          return prevResult;
-        });
-      } else if (value === '-' || value === '+' || value === '/') {
+      } else if (['-', '+', '/', '*', 'X','.'].includes(value)) {
         // Check if the last character is already a mathematical operator
-        const lastChar = result.charAt(result.length - 1);
-        if (!['-', '+', '/', '*'].includes(lastChar)) {
-          setResult((prevResult) => prevResult + value);
+        if (result === '' || isNaN(parseFloat(result))) {
+          alert('Enter a number before using operators');
+        } else {
+          setResult((prevResult) => {
+            const newResult = prevResult.replace(/[-+*/X]+$/, '') + value;
+            return newResult;
+          });
         }
       } else if (value === 'sqrt') {
         // Square root
         setResult((prevResult) => {
+          if (prevResult === '' || isNaN(prevResult)) {
+            alert('Invalid number');
+            return prevResult;
+          }
           try {
             const num = Math.sqrt(parseFloat(prevResult));
             setSolved(num.toString());
@@ -97,6 +104,10 @@ export default function Center() {
       } else if (value === 'x^2') {
         // x square
         setResult((prevResult) => {
+          if (prevResult === '' || isNaN(prevResult)) {
+            alert('Invalid number');
+            return prevResult;
+          }
           try {
             const num = parseFloat(prevResult) ** 2;
             setSolved(num.toString());
@@ -107,8 +118,12 @@ export default function Center() {
           }
         });
       } else if (value === '2root x') {
-        // nth root
+        // 2nd root
         setResult((prevResult) => {
+          if (prevResult === '' || isNaN(prevResult)) {
+            alert('Invalid number');
+            return prevResult;
+          }
           try {
             const num = nthRoot(parseFloat(prevResult), 2);
             setSolved(num.toString());
@@ -130,6 +145,8 @@ export default function Center() {
       }
     };
     
+    
+    
     const NUMBERS = [
       { number: '%', value: '%' },
       { number: 'CE', value: 'Clear' },
@@ -138,7 +155,7 @@ export default function Center() {
       { number: 'x^2', value: 'x^2' },
       { number: '2√x', value: '2root x' },
       { number: '√', value: 'sqrt' },
-      { number: 'X', value: 'X' },
+      { number: 'X', value: '*' },
       { number: '7', value: '7' },
       { number: '8', value: '8' },
       { number: '9', value: '9' },
@@ -157,41 +174,51 @@ export default function Center() {
       { number: '=', value: '=' },
     ];
     
-    
-    const getButtonBackgroundColor = ({item}) => {
+    const getButtonBackgroundColor = ({ item }) => {
       if (item.value === '=') {
-
         return { backgroundColor: '#ff9933' }; // Set the background color for "=" button
       }
-
       return {}; // Return empty object for other buttons 
     };
-    const getTopButtonColor=({item})=>{
-      if(['%','Clear','C', 'close'].includes(item.value))
-        {
+    
+    const getTopButtonColor = ({ item }) => {
+      if (['%', 'Clear', 'C', 'close'].includes(item.value)) {
         return { backgroundColor: '#C4741F' };
       }
-      return{}
-    }
-    const topside = ({item}) => {
+      return {};
+    };
+    
+    const topside = ({ item }) => {
       if (['x^2', '2root x', 'sqrt', 'X', '/', '-', '+'].includes(item.value)) {
-
         return { backgroundColor: '#D64333' };
       }
       return {}; // Return empty object for other buttons 
     };
     
-        const renderNumber = ({ item }) => (
-          <TouchableOpacity style={[styles.numberButton, getButtonBackgroundColor({ item }),topside({item}), getTopButtonColor({ item })]} onPress={() => pressed(item.value)}>
-          <Text style={styles.numberText}>{item.number}</Text>
-        </TouchableOpacity>
-        );
-      
-        return (
+    const renderNumber = ({ item }) => (
+      <TouchableOpacity style={[styles.numberButton, getButtonBackgroundColor({ item }), topside({ item }), getTopButtonColor({ item })]} onPress={() => pressed(item.value)}>
+        <Text style={styles.numberText}>{item.number}</Text>
+      </TouchableOpacity>
+    );
+          
+    return (
           <> 
           <View style={styles.container}>
-            <Text style={styles.result}>{result}</Text>
-            <Text style={{position:"absolute",top:-100,fontSize:39,margin:15}}>{solved}</Text>
+          <Text style={[styles.result, { fontSize: result.length > 20 ? 20 : 30 }]}>
+  {result}
+</Text>
+            <Text style={{
+  position: "absolute",
+  top: -80, // Adjust the position as needed
+  left: 0,
+  right: 0,
+  bottom: 0,
+  margin: 15,
+  textAlign: "center",
+  fontSize: solved.length > 20 ? 20 : 30, // Conditionally set fontSize
+}}>
+  {solved}
+</Text>
             <FlatList
               data={NUMBERS}
               numColumns={4}
@@ -206,12 +233,14 @@ export default function Center() {
         );
       };
 const styles = StyleSheet.create({
+  
     container: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
       position:'absolute',
-      bottom:80,
+      bottom:30,
+      backgroundColor:'#1E2544'
       
     },
     numberGrid: {
@@ -225,7 +254,7 @@ const styles = StyleSheet.create({
       margin: 5,
     
       backgroundColor: '#e3e3e3',
-      borderRadius: 10,
+      borderRadius: 50,
     },
     numberText: {
       fontSize: 24,
@@ -233,11 +262,13 @@ const styles = StyleSheet.create({
       color: 'black',
     },
     result:{
-        fontSize:30,
-        color:'black',
+             color:'white',
         textAlign:'center',
-        backgroundColor:'#61626F',
+        backgroundColor:'#1E2544',
         width:400,
-        height:70
+        height:70,
+        padding:12,
+        position:'relative',
+        bottom:10
     }
   });
